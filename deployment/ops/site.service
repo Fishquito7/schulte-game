@@ -1,0 +1,24 @@
+[Unit]
+Description=Personal site (fishquito.site) - static HTTPS server on 127.0.0.1:8090
+Documentation=file:/home/fishquito/app/site/README.md
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/home/fishquito
+
+[Service]
+Type=simple
+User=fishquito
+Group=admin
+WorkingDirectory=/home/fishquito/app/site
+Environment=SITE_HOST=127.0.0.1
+Environment=SITE_PORT=8090
+Environment=SITE_HTTP_PORT=8091
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server.mjs
+Restart=always
+RestartSec=3
+StandardOutput=append:/home/fishquito/app/site/site.log
+StandardError=append:/home/fishquito/app/site/site.log
+
+[Install]
+WantedBy=multi-user.target

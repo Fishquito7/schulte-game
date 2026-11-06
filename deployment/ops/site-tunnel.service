@@ -1,0 +1,21 @@
+[Unit]
+Description=SakuraFrp HTTPS tunnel for fishquito.site (443 -> 127.0.0.1:8090)
+Documentation=file:/home/fishquito/app/site/README.md
+After=network-online.target site.service
+Wants=network-online.target
+RequiresMountsFor=/home/fishquito
+
+[Service]
+Type=simple
+User=fishquito
+Group=admin
+# system.conf 的 DefaultEnvironment 带 GODEBUG=tlskyber=0，新版 Go 对已移除的键直接 fatal
+UnsetEnvironment=GODEBUG
+ExecStart=/usr/local/bin/frpc -c /home/fishquito/site-tunnel.ini -n
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/fishquito/site-tunnel.log
+StandardError=append:/home/fishquito/site-tunnel.log
+
+[Install]
+WantedBy=multi-user.target

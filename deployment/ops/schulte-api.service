@@ -1,0 +1,26 @@
+[Unit]
+Description=Schulte leaderboard API (127.0.0.1:8097, proxied by site.mjs over TLS)
+Documentation=file:/home/fishquito/app/site/schulte-server/README.md
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/home/fishquito
+
+[Service]
+Type=simple
+User=fishquito
+Group=admin
+WorkingDirectory=/home/fishquito/app/site/schulte-server
+Environment=PORT=8097
+Environment=HOST=127.0.0.1
+Environment=DATA_FILE=/home/fishquito/app/site/data/scores.json
+Environment=STATIC_DIR=/home/fishquito/app/site/public
+Environment=ALLOW_ORIGIN=https://fishquito.site
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+StandardOutput=append:/home/fishquito/app/site/schulte-api.log
+StandardError=append:/home/fishquito/app/site/schulte-api.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+; SakuraFrp frpc 配置（sakura_mode 下以本文件的 proxy 段为准，面板改了要同步改这里）
+; 复制成 site-tunnel.ini 并替换 <...> 占位符，然后 systemctl restart site-tunnel
+[common]
+user = <你的 SakuraFrp 访问密钥>
+sakura_mode = true
+login_fail_exit = false
+server_addr = <节点域名，例如 frp-shy.com>
+server_port = 8088
+
+; section 名必须等于面板里的隧道名
+[site]
+custom_domains = <你的域名>[,www.<你的域名>]
+type = https
+local_ip = 127.0.0.1
+local_port = 8090
+; HTTP 由节点直接 301 到 HTTPS
+force_https = 301
+; 让 frpc 在连接本地服务前加一行 PROXY 头，把访客真实 IP 传进来
+; （必须配合 server.mjs 的解析一起用，缺一边会打不开网页）
+proxy_protocol_version = v1

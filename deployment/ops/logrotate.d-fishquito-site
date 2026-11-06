@@ -1,0 +1,16 @@
+# fishquito.site 的日志轮转
+# 文件由 systemd 以 root 创建（append:）或由 node 以 fishquito 创建，
+# 用 copytruncate 避免需要给进程发信号（node 的 appendFile 每次短开短关，截断即生效）。
+/home/fishquito/app/site/site.log
+/home/fishquito/app/site/access-ip.log
+/home/fishquito/app/site/schulte-api.log
+{
+    daily
+    rotate 14
+    size 5M
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
