@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="color-scheme" content="dark">
+<title>舒尔特方格 · 形状挑战</title>
+<style>
+  :root{
+    --bg:#070a12; --panel:#0f1421; --line:#222c44; --txt:#e8eefc; --dim:#7f8bab;
+    --acc:#4cc9f0; --acc2:#7cf5c4; --bad:#ff5d7a; --gold:#ffd166;
+    --cell:#141c2e; --cellHover:#1c2740; --stroke:#26314d; --strokeHover:#3a4a72;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;padding:16px;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(1100px 700px at 50% -15%, #16203a 0%, #070a12 58%) fixed;
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .app{width:min(96vw,640px);display:flex;flex-direction:column;gap:11px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{display:flex;align-items:baseline;gap:8px}
+  .brand h1{margin:0;font-size:15px;letter-spacing:.18em;font-weight:700}
+  .brand span{font-size:11px;color:var(--dim);letter-spacing:.08em}
+  .iconbtn{
+    border:1px solid var(--line);background:var(--panel);color:var(--dim);border-radius:10px;
+    width:34px;height:32px;font-size:14px;cursor:pointer;transition:.15s;line-height:1;
+  }
+  .iconbtn:hover{color:var(--txt);border-color:var(--strokeHover)}
+
+  .hud{display:grid;grid-template-columns:1.15fr .8fr 1fr .85fr;gap:7px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:7px 10px;display:flex;align-items:baseline;gap:5px;overflow:hidden}
+  .stat b{font-size:clamp(16px,4.4vw,22px);font-variant-numeric:tabular-nums;font-weight:750;letter-spacing:-.02em;line-height:1.35}
+  .stat small{font-size:10.5px;color:var(--dim);letter-spacing:.04em;white-space:nowrap}
+  #target{color:var(--acc2)}
+  #errors{color:var(--bad)}
+  #score{transition:color .2s}
+  .g-S{color:var(--gold)!important}
+  .g-A{color:var(--acc2)!important}
+  .g-B{color:var(--acc)!important}
+  .g-C{color:#9aa8c7!important}
+  .g-D{color:var(--bad)!important}
+
+  .boardWrap{position:relative;width:min(100%,56vh);margin:0 auto;aspect-ratio:1/1}
+  svg{width:100%;height:100%;display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+
+  .cell > *{fill:var(--cell);stroke:var(--stroke);stroke-width:1.5;transition:fill .18s,stroke .18s}
+  .cell{cursor:pointer}
+  .cell:hover > *{fill:var(--cellHover);stroke:var(--strokeHover)}
+  .cell text{fill:#dfe8fb;font-weight:650;pointer-events:none;font-family:inherit;font-variant-numeric:tabular-nums}
+  .cell.done{opacity:.26;pointer-events:none;transition:opacity .3s}
+  #board.fin .cell.done{opacity:.5}
+  #board.fin .cell.done > *{stroke:#2f3f63}
+  .cell.done > *{fill:#0a1220;stroke:#182135}
+  .cell.wrong > *{fill:#3a1220;stroke:var(--bad)}
+  .cell.wrong{animation:shake .24s ease-in-out;transform-box:fill-box;transform-origin:center}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+  .orbit{fill:none;stroke:rgba(124,245,196,.32);stroke-width:1.5;stroke-dasharray:2 15;
+         transform-box:view-box;transform-origin:300px 300px;animation:spin 18s linear infinite;pointer-events:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .halo{fill:none;stroke:rgba(76,201,240,.5);stroke-width:1.5;pointer-events:none;animation:breathe 4.2s ease-in-out infinite}
+  @keyframes breathe{0%,100%{opacity:.18}50%{opacity:.75}}
+
+  .rip{fill:none;stroke:var(--acc2);stroke-width:2;transform-box:view-box;animation:rip .55s ease-out forwards;pointer-events:none}
+  @keyframes rip{from{opacity:.9;transform:scale(.25)}to{opacity:0;transform:scale(2.2)}}
+
+  .prog{height:3px;border-radius:3px;background:#141c2e;overflow:hidden}
+  .prog i{display:block;height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .25s ease}
+
+  .controls{display:grid;grid-template-columns:1.4fr 1fr;gap:8px}
+  .seg{display:flex;gap:4px;background:var(--panel);padding:4px;border-radius:14px;border:1px solid var(--line)}
+  .seg button{
+    flex:1;border:0;background:transparent;color:var(--dim);font:inherit;font-size:12.5px;
+    padding:7px 4px;border-radius:10px;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .seg button:hover{color:var(--txt)}
+  .seg button.on{background:linear-gradient(180deg,#22304f,#1a2540);color:#fff;box-shadow:0 2px 10px rgba(76,201,240,.18)}
+  .subrow{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:12px;color:var(--dim)}
+  .toggle{border:1px solid var(--line);background:var(--panel);color:var(--dim);border-radius:10px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer;transition:.15s}
+  .toggle.on{color:#0b1220;background:var(--acc2);border-color:var(--acc2);font-weight:700}
+
+  #overlay{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    border-radius:26px;background:rgba(7,10,18,.55);backdrop-filter:blur(3px);
+    opacity:0;pointer-events:none;transition:opacity .22s;
+  }
+  #overlay.show{opacity:1;pointer-events:auto}
+
+  .cd{font-size:clamp(60px,13vmin,110px);font-weight:820;letter-spacing:-.04em;
+      background:linear-gradient(180deg,#fff,#78c6ff);-webkit-background-clip:text;background-clip:text;color:transparent;
+      animation:pop .32s cubic-bezier(.2,1.5,.4,1)}
+  @keyframes pop{from{transform:scale(.72);opacity:0}to{transform:scale(1);opacity:1}}
+
+  .panel-in{text-align:center;padding:20px 24px;min-width:min(86%,330px);
+    background:rgba(15,20,33,.9);border:1px solid var(--line);border-radius:22px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);animation:pop .28s ease}
+  .panel-in h2{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--dim);letter-spacing:.2em}
+  .big{font-size:clamp(34px,7.6vmin,54px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:1.1}
+  .big small{font-size:.36em;color:var(--dim);margin-left:5px;font-weight:600;letter-spacing:0}
+  .meta{margin-top:9px;font-size:12.5px;color:var(--dim);line-height:1.85;font-variant-numeric:tabular-nums}
+  .meta b{color:var(--txt);font-weight:650}
+  .rec{color:var(--acc2);font-weight:700;letter-spacing:.05em}
+  .tiny{font-size:11px;color:#5d6a88;margin-top:7px;font-variant-numeric:tabular-nums}
+
+  .scoreRow{display:flex;align-items:center;justify-content:center;gap:14px}
+  .badge{
+    width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:27px;font-weight:850;letter-spacing:-.02em;flex:0 0 auto;
+    border:2px solid currentColor;background:rgba(255,255,255,.03);
+    box-shadow:0 0 26px -6px currentColor;
+  }
+  .btn{
+    margin-top:14px;border:0;border-radius:12px;padding:11px 26px;font:inherit;font-size:14px;font-weight:700;
+    color:#06121c;background:linear-gradient(135deg,var(--acc2),var(--acc));cursor:pointer;letter-spacing:.06em;
+    box-shadow:0 8px 26px rgba(76,201,240,.32);transition:transform .12s,box-shadow .15s;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn:hover{box-shadow:0 10px 32px rgba(76,201,240,.48)}
+  .hint{margin-top:8px;font-size:11.5px;color:#5d6a88}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><h1>舒尔特方格</h1><span>SHAPES</span></div>
+    <button class="iconbtn" id="sound" title="音效开关">🔊</button>
+  </div>
+
+  <div class="hud">
+    <div class="stat"><b id="time">0.00</b><small>秒</small></div>
+    <div class="stat"><b id="score">—</b><small>评分</small></div>
+    <div class="stat"><b id="target">1</b><small>下一个</small></div>
+    <div class="stat"><b id="errors">0</b><small>失误</small></div>
+  </div>
+
+  <div class="prog"><i id="bar"></i></div>
+
+  <div class="boardWrap">
+    <svg id="board" viewBox="0 0 600 600" aria-label="舒尔特方格棋盘"></svg>
+    <div id="overlay"></div>
+  </div>
+
+  <div class="controls">
+    <div class="seg" id="shapeSeg">
+      <button data-v="square" class="on">方形</button>
+      <button data-v="radial">圆环</button>
+      <button data-v="hex">蜂窝</button>
+    </div>
+    <div class="seg" id="sizeSeg">
+      <button data-v="4">4×4</button>
+      <button data-v="5" class="on">5×5</button>
+      <button data-v="6">6×6</button>
+    </div>
+  </div>
+  <div class="subrow">
+    <span id="bestLine">最佳 —</span>
+    <div style="display:flex;gap:8px">
+      <button class="toggle on" id="motion">动效</button>
+      <button class="toggle" id="rev">倒序</button>
+      <button class="toggle" id="again2">重开</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const $ = s => document.querySelector(s);
+  const board   = $('#board');
+  const overlay = $('#overlay');
+  const elTime  = $('#time');
+  const elScore = $('#score');
+  const elTarget= $('#target');
+  const elErr   = $('#errors');
+  const elBar   = $('#bar');
+  const elBest  = $('#bestLine');
+
+  // 每形状每尺寸的环带格数（总和 = n²）
+  const RING_PRESETS = { 4:[1,5,10], 5:[1,8,16], 6:[1,8,12,15] };
+
+  // S 级基准线（秒）：圆环最难、蜂窝次之
+  const PAR = {
+    square:{4:18, 5:30, 6:48},
+    radial:{4:22, 5:38, 6:58},
+    hex:   {4:20, 5:34, 6:54}
+  };
+  const SCORE_MAX = 120;
+  const GRADE_CUT = [['S',100],['A',85],['B',70],['C',55],['D',0]];
+
+  // 圆环各环角速度（deg/s），正负代表方向
+  const ROT_SPEED = [0, 6, -4.2, 3.1, -2.3, 1.7];
+
+  const state = {
+    shape:'square', n:5, reverse:false, motion:true,
+    total:25, queue:[], qi:0, errors:0, penalty:0,
+    started:false, finished:false, t0:0, raf:0, token:0, sound:true
+  };
+
+  let animT = 0, animRAF = 0, rings = [];
+
+  /* ---------------- 音效 ---------------- */
+  let actx = null;
+  function blip(freq, dur, type){
+    if(!state.sound) return;
+    try{
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || 'sine';
+      o.frequency.value = freq;
+      g.gain.value = 0.045;
+      o.connect(g); g.connect(actx.destination);
+      const t = actx.currentTime;
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.06));
+      o.start(t); o.stop(t + (dur || 0.06) + 0.02);
+    }catch(e){}
+  }
+  function fanfare(grade){
+    const seq = grade === 'S' ? [784,988,1175,1568]
+              : grade === 'A' ? [784,988,1175]
+              : grade === 'B' ? [659,880]
+              : grade === 'C' ? [523,659]
+              : [196,165];
+    seq.forEach((f, i) => setTimeout(()=>blip(f, .13, 'sine'), i*95));
+  }
+
+  /* ---------------- 评分 ---------------- */
+  const parOf   = () => PAR[state.shape][state.n];
+  const scoreOf = t => Math.max(0, Math.min(SCORE_MAX, Math.round(parOf() / t * 100)));
+  function gradeOf(s){
+    for(const g of GRADE_CUT) if(s >= g[1]) return g[0];
+    return 'D';
+  }
+  function gradeLines(){
+    const p = parOf();
+    return GRADE_CUT.filter(g => g[1] > 0 && g[0] !== 'S').map(g => `${g[0]}≤${(100*p/g[1]).toFixed(1)}s`).join(' · ');
+  }
+
+  /* ---------------- 布局：方形 ---------------- */
+  function buildSquare(n){
+    const pad = 26, gap = n <= 4 ? 12 : (n === 5 ? 10 : 8);
+    const s = (600 - pad*2 - gap*(n-1)) / n;
+    const rx = Math.min(16, s*0.18);
+    const out = [];
+    for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+      const x = pad + c*(s+gap), y = pad + r*(s+gap);
+      out.push({
+        markup:`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${s.toFixed(2)}" height="${s.toFixed(2)}" rx="${rx.toFixed(2)}" ry="${rx.toFixed(2)}"/>`,
+        cx:x+s/2, cy:y+s/2, fs:s*0.42
+      });
+    }
+    return out;
+  }
+
+  /* ---------------- 布局：圆环（等面积分格） ---------------- */
+  const CX = 300, CY = 300, RAD = 274;
+  const pt = (r,a) => [CX + r*Math.cos(a), CY + r*Math.sin(a)];
+
+  function sectorPath(r0, r1, a0, a1){
+    const large = (a1 - a0) > Math.PI ? 1 : 0;
+    const [x1,y1] = pt(r1,a0), [x2,y2] = pt(r1,a1);
+    if(r0 <= 0.5){
+      return `M${CX} ${CY}L${x1.toFixed(2)} ${y1.toFixed(2)}A${r1.toFixed(2)} ${r1.toFixed(2)} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}Z`;
+    }
+    const [x3,y3] = pt(r0,a1), [x4,y4] = pt(r0,a0);
+    return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r1.toFixed(2)} ${r1.toFixed(2)} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`
+         + `L${x3.toFixed(2)} ${y3.toFixed(2)}A${r0.toFixed(2)} ${r0.toFixed(2)} 0 ${large} 0 ${x4.toFixed(2)} ${y4.toFixed(2)}Z`;
+  }
+
+  function buildRadial(n){
+    const counts = RING_PRESETS[n] || RING_PRESETS[5];
+    const N = counts.reduce((a,b)=>a+b, 0);
+    const out = [];
+    let cum = 0, rPrev = 0;
+
+    counts.forEach((count, ri) => {
+      cum += count;
+      // 半径按累计格数开方 → 每个扇环面积相等 → 每格面积相等
+      const rOuter = RAD * Math.sqrt(cum / N);
+      const rInner = rPrev + (ri === 0 ? 0 : 3);
+      const rOut   = rOuter - 3;
+      rPrev = rOuter;
+
+      if(count === 1){
+        out.push({ markup:`<circle cx="${CX}" cy="${CY}" r="${rOut.toFixed(2)}"/>`, ring:ri, cx:CX, cy:CY, fs:rOut*0.6 });
+        return;
+      }
+
+      const span = Math.PI*2 / count;
+      const gapA = Math.min(0.055, span*0.1);
+      const midR = (rInner + rOut)/2;
+      const fs   = Math.max(11, Math.min(46, Math.min(rOut - rInner, span*midR) * 0.44));
+
+      for(let j=0;j<count;j++){
+        const a0 = -Math.PI/2 + j*span + gapA/2;
+        const a1 = -Math.PI/2 + (j+1)*span - gapA/2;
+        const [tx,ty] = pt(midR, (a0+a1)/2);
+        out.push({ markup:`<path d="${sectorPath(rInner, rOut, a0, a1)}"/>`, ring:ri, cx:tx, cy:ty, fs:fs });
+      }
+    });
+    return out;
+  }
+
+  /* ---------------- 布局：蜂窝 ---------------- */
+  function buildHex(n){
+    const pad = 22;
+    const availW = 600 - pad*2, availH = 600 - pad*2;
+    const s = Math.min((availW/(n + 0.5))/Math.sqrt(3), availH/(2 + 1.5*(n-1)));
+    const w = Math.sqrt(3)*s, vspace = 1.5*s;
+    const totalW = n*w + w/2;
+    const totalH = 2*s + (n-1)*vspace;
+    const ox = (600 - totalW)/2, oy = (600 - totalH)/2;
+    const out = [];
+
+    for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+      const cx = ox + w/2 + c*w + (r % 2 ? w/2 : 0);
+      const cy = oy + s + r*vspace;
+      const pts = [];
+      for(let k=0;k<6;k++){
+        const a = (-90 + 60*k) * Math.PI/180;
+        pts.push(`${(cx + s*Math.cos(a)).toFixed(2)},${(cy + s*Math.sin(a)).toFixed(2)}`);
+      }
+      out.push({ markup:`<polygon points="${pts.join(' ')}"/>`, cx:cx, cy:cy, fs:s*0.62 });
+    }
+    return out;
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  function build(){
+    if(state.shape === 'square') return buildSquare(state.n);
+    if(state.shape === 'radial') return buildRadial(state.n);
+    return buildHex(state.n);
+  }
+  function shuffled(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function render(){
+    const cells = build();
+    const nums  = shuffled(Array.from({length:cells.length}, (_,i)=>i+1));
+    const parts = [];
+    let open = false, lastRing = null;
+
+    for(let i=0;i<cells.length;i++){
+      const c = cells[i];
+      const rk = (c.ring === undefined) ? null : c.ring;
+      if(rk !== lastRing){
+        if(open) parts.push('</g>');
+        open = false;
+        if(rk !== null){ parts.push(`<g class="ring" data-k="${rk}">`); open = true; }
+        lastRing = rk;
+      }
+      parts.push(
+        `<g class="cell" data-num="${nums[i]}">${c.markup}` +
+        `<text x="${c.cx.toFixed(2)}" y="${c.cy.toFixed(2)}" data-x="${c.cx.toFixed(2)}" data-y="${c.cy.toFixed(2)}" ` +
+        `font-size="${c.fs.toFixed(2)}" text-anchor="middle" dominant-baseline="central">${nums[i]}</text></g>`
+      );
+    }
+    if(open) parts.push('</g>');
+
+    let html = parts.join('');
+    if(state.shape === 'radial'){
+      html += `<circle class="halo" cx="300" cy="300" r="279"/>`
+            + `<circle class="orbit" cx="300" cy="300" r="288"/>`;
+    }
+
+    board.innerHTML = html;
+    state.total = cells.length;
+    collectRings();
+  }
+
+  /* ---------------- 圆环动效 ---------------- */
+  function collectRings(){
+    rings = [];
+    if(state.shape !== 'radial') return;
+    board.querySelectorAll('g.ring').forEach(g => {
+      const k = parseInt(g.dataset.k, 10);
+      rings.push({
+        g: g,
+        speed: state.motion ? (ROT_SPEED[k % ROT_SPEED.length] || 0) : 0,
+        angle: k === 0 ? 0 : Math.random()*360,
+        texts: Array.from(g.querySelectorAll('text')).map(t => ({
+          el: t, x: parseFloat(t.dataset.x), y: parseFloat(t.dataset.y)
+        }))
+      });
+    });
+    rings.forEach(applyRing);
+    if(rings.length){ animT = 0; cancelAnimationFrame(animRAF); animRAF = requestAnimationFrame(animate); }
+  }
+
+  function applyRing(r){
+    if(!r.speed) return;
+    r.g.setAttribute('transform', `rotate(${r.angle.toFixed(2)} 300 300)`);
+    const inv = (-r.angle).toFixed(2);
+    for(const t of r.texts) t.el.setAttribute('transform', `rotate(${inv} ${t.x} ${t.y})`);
+  }
+
+  function animate(ts){
+    if(!rings.length){ animT = 0; return; }
+    const dt = Math.min(64, animT ? ts - animT : 16);
+    animT = ts;
+    for(const r of rings){
+      if(!r.speed) continue;
+      r.angle += r.speed * dt / 1000;
+      if(r.angle > 360) r.angle -= 360;
+      if(r.angle < -360) r.angle += 360;
+      applyRing(r);
+    }
+    animRAF = requestAnimationFrame(animate);
+  }
+
+  function setMotion(on){
+    state.motion = on;
+    for(const r of rings){
+      if(on){
+        r.speed = ROT_SPEED[parseInt(r.g.dataset.k, 10) % ROT_SPEED.length] || 0;
+      }else{
+        r.speed = 0;
+        r.angle = 0;
+        r.g.removeAttribute('transform');
+        for(const t of r.texts) t.el.removeAttribute('transform');
+      }
+    }
+    animT = 0;
+    if(on && rings.length){ cancelAnimationFrame(animRAF); animRAF = requestAnimationFrame(animate); }
+  }
+
+  /* 元素中心点（含所有变换），用于涟漪定位 */
+  function centerOf(g){
+    try{
+      const bb = g.getBBox();
+      const m  = g.getScreenCTM();
+      if(!m) return null;
+      const p = new DOMPoint(bb.x + bb.width/2, bb.y + bb.height/2).matrixTransform(m);
+      const q = new DOMPoint(p.x, p.y).matrixTransform(board.getScreenCTM().inverse());
+      return q;
+    }catch(e){
+      const r = g.getBoundingClientRect(), b = board.getBoundingClientRect();
+      if(!b.width) return null;
+      return { x:(r.left + r.width/2 - b.left)/b.width*600, y:(r.top + r.height/2 - b.top)/b.height*600 };
+    }
+  }
+
+  /* ---------------- 记录 ---------------- */
+  function recKey(){ return `schulte.rec.${state.shape}.${state.n}.${state.reverse?'rev':'fwd'}`; }
+  function getRec(){
+    try{ const v = localStorage.getItem(recKey()); return v ? JSON.parse(v) : null; }
+    catch(e){ return null; }
+  }
+  function setRec(t, s){
+    try{ localStorage.setItem(recKey(), JSON.stringify({t:t, s:s})); }catch(e){}
+  }
+  const fmt = t => t.toFixed(2);
+
+  function refreshBestLine(){
+    const r = getRec();
+    elBest.textContent = r ? `最佳 ${fmt(r.t)} 秒 · ${r.s} 分` : '最佳 —';
+  }
+
+  function resetHud(){
+    elTime.textContent = '0.00';
+    elScore.textContent = '—';
+    elScore.className = '';
+    elErr.textContent = '0';
+    elBar.style.width = '0%';
+    elTarget.textContent = state.queue.length ? state.queue[0] : '1';
+  }
+
+  function shapeName(){
+    return state.shape === 'square' ? '方形' : state.shape === 'radial' ? '圆环' : '蜂窝';
+  }
+
+  /* ---------------- 开局 ---------------- */
+  function newRound(){
+    state.token++;
+    cancelAnimationFrame(state.raf);
+    state.started = false;
+    state.finished = false;
+    state.qi = 0;
+    state.errors = 0;
+    state.penalty = 0;
+
+    render();
+    board.classList.remove('fin');
+
+    const N = state.total;
+    state.queue = Array.from({length:N}, (_,i)=> state.reverse ? N - i : i + 1);
+    resetHud();
+    refreshBestLine();
+
+    const rec = getRec();
+    overlay.classList.add('show');
+    overlay.innerHTML =
+      `<div class="panel-in">
+         <h2>${shapeName()} · ${state.n}×${state.n}${state.reverse?' · 倒序':''}</h2>
+         <div class="big">${rec ? fmt(rec.t) + '<small>最佳秒</small>' : N + '<small>格</small>'}</div>
+         <div class="meta">目标顺序 <b>${state.queue[0]} → ${state.queue[N-1]}</b><br>
+           ${rec ? `最佳评分 <b>${rec.s}</b> 分 · ` : ''}点错 +1 秒罚时</div>
+         <button class="btn" id="startBtn">开始游戏</button>
+         <div class="tiny">S 基准 ${parOf().toFixed(1)}s · ${gradeLines()}</div>
+       </div>`;
+    $('#startBtn').addEventListener('click', beginRound);
+  }
+
+  function beginRound(){
+    state.token++;
+    const tok = state.token;
+    state.qi = 0;
+    state.errors = 0;
+    state.penalty = 0;
+    state.finished = false;
+    elErr.textContent = '0';
+    elTime.textContent = '0.00';
+    elScore.textContent = '—';
+    elScore.className = '';
+    elBar.style.width = '0%';
+    elTarget.textContent = state.queue[0];
+
+    const seq = ['3','2','1','GO'];
+    let i = 0;
+    overlay.classList.add('show');
+
+    const step = () => {
+      if(tok !== state.token) return;
+      if(i >= seq.length){
+        overlay.classList.remove('show');
+        overlay.innerHTML = '';
+        state.started = true;
+        state.t0 = performance.now();
+        state.raf = requestAnimationFrame(tick);
+        return;
+      }
+      const label = seq[i++];
+      overlay.innerHTML = `<div class="cd">${label}</div>`;
+      blip(label === 'GO' ? 940 : 500, label === 'GO' ? 0.12 : 0.07, 'sine');
+      setTimeout(step, label === 'GO' ? 260 : 400);
+    };
+    step();
+  }
+
+  function tick(){
+    if(!state.started) return;
+    const t = (performance.now() - state.t0)/1000 + state.penalty;
+    elTime.textContent = fmt(t);
+    if(t > 0.8){
+      const s = scoreOf(t);
+      elScore.textContent = s;
+      elScore.className = 'g-' + gradeOf(s);
+    }
+    state.raf = requestAnimationFrame(tick);
+  }
+
+  /* ---------------- 交互 ---------------- */
+  board.addEventListener('pointerdown', function(e){
+    const g = e.target.closest ? e.target.closest('.cell') : null;
+    if(!g || !state.started || state.finished) return;
+    if(g.classList.contains('done')) return;
+    const num = parseInt(g.dataset.num, 10);
+    if(num === state.queue[state.qi]) hit(g);
+    else miss(g);
+  });
+
+  function hit(g){
+    ripple(g);
+    g.classList.add('done');
+    blip(540 + state.qi*11, 0.05, 'triangle');
+    state.qi++;
+    if(state.qi >= state.queue.length){ finish(); return; }
+    elTarget.textContent = state.queue[state.qi];
+    elBar.style.width = (state.qi / state.queue.length * 100).toFixed(1) + '%';
+  }
+
+  function miss(g){
+    state.errors++;
+    state.penalty += 1;
+    elErr.textContent = state.errors;
+    g.classList.add('wrong');
+    setTimeout(()=>g.classList.remove('wrong'), 260);
+    blip(150, 0.13, 'square');
+  }
+
+  function ripple(g){
+    const c = centerOf(g);
+    if(!c) return;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el.setAttribute('class', 'rip');
+    el.setAttribute('cx', c.x); el.setAttribute('cy', c.y); el.setAttribute('r', 16);
+    el.style.transformOrigin = c.x + 'px ' + c.y + 'px';
+    board.appendChild(el);
+    setTimeout(()=>el.remove(), 620);
+  }
+
+  function finish(){
+    cancelAnimationFrame(state.raf);
+    state.started = false;
+    state.finished = true;
+    elTarget.textContent = '✓';
+    board.classList.add('fin');
+    elBar.style.width = '100%';
+
+    const time  = (performance.now() - state.t0)/1000 + state.penalty;
+    const score = scoreOf(time);
+    const grade = gradeOf(score);
+    const prev  = getRec();
+    const isRec = !prev || score > prev.s || (score === prev.s && time < prev.t);
+    if(isRec) setRec(time, score);
+
+    elTime.textContent = fmt(time);
+    elScore.textContent = score;
+    elScore.className = 'g-' + grade;
+
+    const avg = time / state.queue.length;
+    const deltaTxt = prev
+      ? (time < prev.t ? `比最佳快 <b>${fmt(prev.t - time)}</b>s` : `比最佳慢 <b>${fmt(time - prev.t)}</b>s`)
+      : '首局已记录';
+
+    fanfare(grade);
+
+    overlay.classList.add('show');
+    overlay.innerHTML =
+      `<div class="panel-in">
+         <h2>完成 · ${shapeName()} ${state.n}×${state.n}${state.reverse?' 倒序':''}</h2>
+         <div class="scoreRow">
+           <div class="badge g-${grade}">${grade}</div>
+           <div class="big">${fmt(time)}<small>秒</small></div>
+         </div>
+         <div class="meta">评分 <b class="g-${grade}">${score}</b> 分 · 失误 <b>${state.errors}</b> 次 · 均速 <b>${avg.toFixed(2)}</b>s/格</div>
+         <div class="meta">${isRec ? '<span class="rec">★ 新纪录</span>' : deltaTxt}</div>
+         <button class="btn" id="againBtn">再来一局</button>
+         <div class="tiny">S 基准 ${parOf().toFixed(1)}s · ${gradeLines()}</div>
+       </div>`;
+    $('#againBtn').addEventListener('click', newRound);
+    refreshBestLine();
+  }
+
+  /* ---------------- 配置 ---------------- */
+  function bindSeg(sel, key, cast){
+    const box = $(sel);
+    box.addEventListener('click', function(e){
+      const b = e.target.closest('button');
+      if(!b || b.classList.contains('on')) return;
+      Array.from(box.children).forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      state[key] = cast(b.dataset.v);
+      newRound();
+    });
+  }
+  bindSeg('#shapeSeg', 'shape', v=>v);
+  bindSeg('#sizeSeg', 'n', v=>parseInt(v,10));
+
+  $('#motion').addEventListener('click', function(){
+    const on = !this.classList.contains('on');
+    this.classList.toggle('on', on);
+    setMotion(on);
+  });
+
+  $('#rev').addEventListener('click', function(){
+    state.reverse = !state.reverse;
+    this.classList.toggle('on', state.reverse);
+    newRound();
+  });
+
+  $('#again2').addEventListener('click', newRound);
+
+  $('#sound').addEventListener('click', function(){
+    state.sound = !state.sound;
+    this.textContent = state.sound ? '🔊' : '🔇';
+    if(state.sound) blip(660, 0.06);
+  });
+
+  window.addEventListener('keydown', function(e){
+    if(e.code === 'Space' || e.code === 'Enter'){
+      e.preventDefault();
+      const b = overlay.querySelector('button');
+      if(b) b.click();
+    }
+    if(e.key === 'r' || e.key === 'R') newRound();
+  });
+
+  /* ---------------- 启动 ---------------- */
+  newRound();
+})();
+</script>
+</body>
+</html>
