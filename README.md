@@ -2,7 +2,7 @@
 
 一个单文件、零依赖的舒尔特方格（Schulte Grid）小游戏。点击 1→N 按顺序找数字，三种棋盘形状、实时评分、圆环模式下每一圈会独立转动。
 
-在线试玩：**https://fishquito.github.io/schulte-game/**
+在线试玩：**https://fishquito.site**
 
 ![方形](assets/preview-square.png)
 
@@ -40,11 +40,14 @@ node server.js          # 默认 http://127.0.0.1:8090，同时把游戏本体�
 打开 `http://127.0.0.1:8090/` 就能直接玩，前后端同源，**不需要任何配置**。
 部署到正式服务器（systemd / nginx / HTTPS / 环境变量）见 [`server/README.md`](server/README.md)。
 
-游戏在 GitHub Pages、后端在另一台机器时，把地址填进 `index.html` 顶部：
+站点由这台 Node 服务直接托管（`fishquito.site` → nginx → `127.0.0.1:8090`），
+前后端同源，所以前端**不需要填任何地址**，页面会自动探测 `/api/health`。
+
+如果哪天要把前端挪到别处（对象存储、别的域名），再把后端地址填进 `index.html` 顶部：
 
 ```js
 const NET = Object.assign({
-  base: 'https://api.example.com'   // ← 你的后端地址，留空则自动探测同源
+  base: 'https://api.example.com'   // ← 后端地址，留空则自动探测同源
 }, window.SCHULTE_NET || {});
 ```
 
