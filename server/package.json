@@ -1,0 +1,13 @@
+{
+  "name": "schulte-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "舒尔特方格排行榜后端（零依赖）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

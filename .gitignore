@@ -16,3 +16,7 @@ package-lock.json
 # 临时文件
 *.log
 *.tmp
+
+# 后端运行时数据
+server/data/
+server/data/*.json
