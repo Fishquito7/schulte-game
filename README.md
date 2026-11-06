@@ -2,7 +2,7 @@
 
 一个单文件、零依赖的舒尔特方格（Schulte Grid）小游戏。点击 1→N 按顺序找数字，三种棋盘形状、实时评分、圆环模式下每一圈会独立转动。
 
-在线试玩：**https://<your-name>.github.io/schulte-grid/**
+在线试玩：**https://fishquito.github.io/schulte-game/**
 
 ![方形](assets/preview-square.png)
 
