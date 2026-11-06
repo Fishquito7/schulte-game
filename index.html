@@ -120,14 +120,45 @@
   }
   .btn:active{transform:scale(.97)}
   .btn:hover{box-shadow:0 10px 32px rgba(76,201,240,.48)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--dim);box-shadow:none}
+  .btn.ghost:hover{color:var(--txt);border-color:var(--strokeHover);box-shadow:none}
   .hint{margin-top:8px;font-size:11.5px;color:#5d6a88}
+
+  /* ---------- 排行榜 ---------- */
+  .lbmodal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:18px;
+    background:rgba(4,7,13,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    opacity:0;pointer-events:none;transition:opacity .2s}
+  .lbmodal.show{opacity:1;pointer-events:auto}
+  .lb-card{width:min(94vw,440px);max-height:86vh;display:flex;flex-direction:column;gap:11px;
+    background:linear-gradient(180deg,#111827,#0d1320);border:1px solid var(--line);border-radius:20px;padding:16px;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);transform:translateY(10px) scale(.98);transition:transform .2s}
+  .lbmodal.show .lb-card{transform:none}
+  .lb-head{display:flex;align-items:center;justify-content:space-between}
+  .lb-head h2{margin:0;font-size:13px;letter-spacing:.22em;color:var(--dim);font-weight:600}
+  .lb-tabs{display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
+  .lb-sub{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--dim)}
+  .lb-list{overflow:auto;flex:1;min-height:96px;max-height:46vh;display:flex;flex-direction:column;gap:6px;padding-right:2px}
+  .lb-row{display:grid;grid-template-columns:30px 1fr 58px 76px;align-items:center;gap:8px;
+    padding:9px 11px;border-radius:12px;background:#0f1421;border:1px solid #1b2337;font-variant-numeric:tabular-nums}
+  .lb-row.me{border-color:var(--acc2);background:#10231f}
+  .rk{font-weight:800;font-size:13px;color:var(--dim);text-align:center}
+  .rk.rk1{color:#ffd166}.rk.rk2{color:#cfd8e8}.rk.rk3{color:#d08b5b}
+  .lb-row .t{font-size:17px;font-weight:750}
+  .lb-row .t small{font-size:11px;color:var(--dim);margin-left:2px;font-weight:500}
+  .lb-row .s{text-align:right;font-weight:750;font-size:14px}
+  .lb-row .d{text-align:right;font-size:11px;color:#5d6a88}
+  .lb-empty{padding:34px 10px;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.9}
+  .lb-foot{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#5d6a88;gap:8px}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="topbar">
     <div class="brand"><h1>舒尔特方格</h1><span>SHAPES</span></div>
-    <button class="iconbtn" id="sound" title="音效开关">🔊</button>
+    <div style="display:flex;gap:8px">
+      <button class="iconbtn" id="openLB" title="排行榜">🏆</button>
+      <button class="iconbtn" id="sound" title="音效开关">🔊</button>
+    </div>
   </div>
 
   <div class="hud">
@@ -148,7 +179,7 @@
     <div class="seg" id="shapeSeg">
       <button data-v="square" class="on">方形</button>
       <button data-v="radial">圆环</button>
-      <button data-v="hex">蜂窝</button>
+      <button data-v="ice">冰纹</button>
     </div>
     <div class="seg" id="sizeSeg">
       <button data-v="4">4×4</button>
@@ -162,6 +193,36 @@
       <button class="toggle on" id="motion">动效</button>
       <button class="toggle" id="rev">倒序</button>
       <button class="toggle" id="again2">重开</button>
+    </div>
+  </div>
+</div>
+
+<div class="lbmodal" id="lb">
+  <div class="lb-card">
+    <div class="lb-head">
+      <h2>排行榜</h2>
+      <button class="iconbtn" id="lbClose" title="关闭">✕</button>
+    </div>
+    <div class="lb-tabs">
+      <div class="seg" id="lbShapeSeg">
+        <button data-v="square">方形</button>
+        <button data-v="radial">圆环</button>
+        <button data-v="ice">冰纹</button>
+      </div>
+      <div class="seg" id="lbSizeSeg">
+        <button data-v="4">4×4</button>
+        <button data-v="5">5×5</button>
+        <button data-v="6">6×6</button>
+      </div>
+    </div>
+    <div class="lb-sub">
+      <span id="lbSubtitle">—</span>
+      <button class="toggle" id="lbRev">倒序</button>
+    </div>
+    <div class="lb-list" id="lbList"></div>
+    <div class="lb-foot">
+      <span>仅本机成绩 · 每项保留前 20</span>
+      <button class="toggle" id="lbClear">清空本项</button>
     </div>
   </div>
 </div>
@@ -187,7 +248,7 @@
   const PAR = {
     square:{4:18, 5:30, 6:48},
     radial:{4:22, 5:38, 6:58},
-    hex:   {4:20, 5:34, 6:54}
+    ice:   {4:21, 5:35, 6:55}
   };
   const SCORE_MAX = 120;
   const GRADE_CUT = [['S',100],['A',85],['B',70],['C',55],['D',0]];
@@ -305,26 +366,102 @@
     return out;
   }
 
-  /* ---------------- 布局：蜂窝 ---------------- */
-  function buildHex(n){
-    const pad = 22;
-    const availW = 600 - pad*2, availH = 600 - pad*2;
-    const s = Math.min((availW/(n + 0.5))/Math.sqrt(3), availH/(2 + 1.5*(n-1)));
-    const w = Math.sqrt(3)*s, vspace = 1.5*s;
-    const totalW = n*w + w/2;
-    const totalH = 2*s + (n-1)*vspace;
-    const ox = (600 - totalW)/2, oy = (600 - totalH)/2;
-    const out = [];
+  /* ---------------- 布局：冰纹（Voronoi 碎石） ---------------- */
+  // 用一个 96 边形当作裁剪域，代替真正的圆形
+  const DOMAIN = (function(){
+    const p = [];
+    for(let i=0;i<96;i++){
+      const a = i/96*Math.PI*2;
+      p.push({ x: CX + (RAD-4)*Math.cos(a), y: CY + (RAD-4)*Math.sin(a) });
+    }
+    return p;
+  })();
 
-    for(let r=0;r<n;r++) for(let c=0;c<n;c++){
-      const cx = ox + w/2 + c*w + (r % 2 ? w/2 : 0);
-      const cy = oy + s + r*vspace;
-      const pts = [];
-      for(let k=0;k<6;k++){
-        const a = (-90 + 60*k) * Math.PI/180;
-        pts.push(`${(cx + s*Math.cos(a)).toFixed(2)},${(cy + s*Math.sin(a)).toFixed(2)}`);
+  // Sutherland–Hodgman：保留 nx*x + ny*y <= c 的半平面
+  function clipHalf(poly, nx, ny, c){
+    const out = [];
+    for(let i=0;i<poly.length;i++){
+      const a = poly[i], b = poly[(i+1)%poly.length];
+      const da = nx*a.x + ny*a.y - c;
+      const db = nx*b.x + ny*b.y - c;
+      if(da <= 1e-9) out.push(a);
+      if((da < 0 && db > 0) || (da > 0 && db < 0)){
+        const t = da / (da - db);
+        out.push({ x: a.x + t*(b.x-a.x), y: a.y + t*(b.y-a.y) });
       }
-      out.push({ markup:`<polygon points="${pts.join(' ')}"/>`, cx:cx, cy:cy, fs:s*0.62 });
+    }
+    return out;
+  }
+
+  function voronoiCell(seeds, i){
+    let poly = DOMAIN;
+    const si = seeds[i];
+    for(let j=0;j<seeds.length && poly.length>2;j++){
+      if(j === i) continue;
+      const sj = seeds[j];
+      const nx = sj.x - si.x, ny = sj.y - si.y;
+      const c  = (sj.x*sj.x + sj.y*sj.y - si.x*si.x - si.y*si.y) / 2;
+      poly = clipHalf(poly, nx, ny, c);
+    }
+    return poly;
+  }
+
+  function polyInfo(poly){
+    let a = 0, cx = 0, cy = 0;
+    for(let i=0;i<poly.length;i++){
+      const p = poly[i], q = poly[(i+1)%poly.length];
+      const f = p.x*q.y - q.x*p.y;
+      a += f; cx += (p.x+q.x)*f; cy += (p.y+q.y)*f;
+    }
+    a *= 0.5;
+    if(Math.abs(a) < 1e-6) return { area:0, x:poly[0].x, y:poly[0].y };
+    return { area: Math.abs(a), x: cx/(6*a), y: cy/(6*a) };
+  }
+
+  function buildIce(n){
+    const N = n*n, R = RAD - 10;
+    let seeds = [];
+
+    // 最远点采样：先铺得疏密均匀，避免出现极小碎块
+    for(let i=0;i<N;i++){
+      let best = null, bestD = -1;
+      for(let k=0;k<40;k++){
+        const a = Math.random()*Math.PI*2, r = Math.sqrt(Math.random())*R;
+        const p = { x: CX + r*Math.cos(a), y: CY + r*Math.sin(a) };
+        let d = Infinity;
+        for(const s of seeds) d = Math.min(d, (s.x-p.x)*(s.x-p.x) + (s.y-p.y)*(s.y-p.y));
+        if(d > bestD){ bestD = d; best = p; }
+      }
+      seeds.push(best);
+    }
+
+    // Lloyd 松弛两轮：把种子推到各格重心，面积趋同 → 难度一致
+    for(let it=0; it<2; it++){
+      const next = [];
+      for(let i=0;i<N;i++){
+        const info = polyInfo(voronoiCell(seeds, i));
+        next.push(info.area > 1 ? { x: info.x, y: info.y } : seeds[i]);
+      }
+      seeds = next;
+    }
+
+    const gap = 3.2;
+    const out = [];
+    for(let i=0;i<N;i++){
+      const poly = voronoiCell(seeds, i);
+      if(poly.length < 3) continue;
+      const info = polyInfo(poly);
+      const pts = poly.map(p => {
+        const dx = p.x - info.x, dy = p.y - info.y;
+        const len = Math.sqrt(dx*dx + dy*dy) || 1;
+        const k = Math.max(0.4, (len - gap) / len);   // 向重心收缩，留出缝隙
+        return `${(info.x + dx*k).toFixed(2)},${(info.y + dy*k).toFixed(2)}`;
+      });
+      out.push({
+        markup: `<polygon points="${pts.join(' ')}"/>`,
+        cx: info.x, cy: info.y,
+        fs: Math.max(12, Math.min(36, Math.sqrt(info.area) * 0.46))
+      });
     }
     return out;
   }
@@ -333,7 +470,7 @@
   function build(){
     if(state.shape === 'square') return buildSquare(state.n);
     if(state.shape === 'radial') return buildRadial(state.n);
-    return buildHex(state.n);
+    return buildIce(state.n);
   }
   function shuffled(arr){
     for(let i=arr.length-1;i>0;i--){
@@ -449,19 +586,34 @@
     }
   }
 
-  /* ---------------- 记录 ---------------- */
-  function recKey(){ return `schulte.rec.${state.shape}.${state.n}.${state.reverse?'rev':'fwd'}`; }
-  function getRec(){
-    try{ const v = localStorage.getItem(recKey()); return v ? JSON.parse(v) : null; }
-    catch(e){ return null; }
+  /* ---------------- 排行榜存储 ---------------- */
+  const LB_KEY = 'schulte.lb.v1';
+  const LB_MAX = 20;
+  const lbKeyOf = (sh, n, rev) => sh + '|' + n + '|' + (rev ? 'r' : 'f');
+
+  function lbAll(){
+    try{ return JSON.parse(localStorage.getItem(LB_KEY)) || {}; }catch(e){ return {}; }
   }
-  function setRec(t, s){
-    try{ localStorage.setItem(recKey(), JSON.stringify({t:t, s:s})); }catch(e){}
+  function lbList(sh, n, rev){
+    const all = lbAll();
+    return all[lbKeyOf(sh, n, rev)] || [];
+  }
+  function lbBest(){
+    const l = lbList(state.shape, state.n, state.reverse);
+    return l.length ? l[0] : null;
+  }
+  function lbPush(rec){
+    const all = lbAll();
+    const k = lbKeyOf(state.shape, state.n, state.reverse);
+    const arr = (all[k] || []).concat([rec]).sort((a,b)=> a.t - b.t).slice(0, LB_MAX);
+    all[k] = arr;
+    try{ localStorage.setItem(LB_KEY, JSON.stringify(all)); }catch(e){}
+    return arr;
   }
   const fmt = t => t.toFixed(2);
 
   function refreshBestLine(){
-    const r = getRec();
+    const r = lbBest();
     elBest.textContent = r ? `最佳 ${fmt(r.t)} 秒 · ${r.s} 分` : '最佳 —';
   }
 
@@ -474,9 +626,10 @@
     elTarget.textContent = state.queue.length ? state.queue[0] : '1';
   }
 
-  function shapeName(){
-    return state.shape === 'square' ? '方形' : state.shape === 'radial' ? '圆环' : '蜂窝';
+  function shapeNameOf(s){
+    return s === 'square' ? '方形' : s === 'radial' ? '圆环' : '冰纹';
   }
+  function shapeName(){ return shapeNameOf(state.shape); }
 
   /* ---------------- 开局 ---------------- */
   function newRound(){
@@ -496,7 +649,7 @@
     resetHud();
     refreshBestLine();
 
-    const rec = getRec();
+    const rec = lbBest();
     overlay.classList.add('show');
     overlay.innerHTML =
       `<div class="panel-in">
@@ -609,9 +762,16 @@
     const time  = (performance.now() - state.t0)/1000 + state.penalty;
     const score = scoreOf(time);
     const grade = gradeOf(score);
-    const prev  = getRec();
-    const isRec = !prev || score > prev.s || (score === prev.s && time < prev.t);
-    if(isRec) setRec(time, score);
+    const prev  = lbBest();
+    const run   = {
+      t: parseFloat(time.toFixed(2)),
+      s: score,
+      id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      d: new Date().toISOString()
+    };
+    const list  = lbPush(run);
+    const isRec = !prev || list[0].id === run.id;
+    const rank  = list.findIndex(x => x.id === run.id) + 1;
 
     elTime.textContent = fmt(time);
     elScore.textContent = score;
@@ -633,13 +793,65 @@
            <div class="big">${fmt(time)}<small>秒</small></div>
          </div>
          <div class="meta">评分 <b class="g-${grade}">${score}</b> 分 · 失误 <b>${state.errors}</b> 次 · 均速 <b>${avg.toFixed(2)}</b>s/格</div>
-         <div class="meta">${isRec ? '<span class="rec">★ 新纪录</span>' : deltaTxt}</div>
-         <button class="btn" id="againBtn">再来一局</button>
+         <div class="meta">${isRec ? '<span class="rec">★ 新纪录</span>' : deltaTxt}${rank ? ` · 本项第 <b>${rank}</b> 名` : ''}</div>
+         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+           <button class="btn" id="againBtn">再来一局</button>
+           <button class="btn ghost" id="lbBtn">看排行榜</button>
+         </div>
          <div class="tiny">S 基准 ${parOf().toFixed(1)}s · ${gradeLines()}</div>
        </div>`;
     $('#againBtn').addEventListener('click', newRound);
+    $('#lbBtn').addEventListener('click', function(){ openLB(); });
+    state.lastRunId = run.id;
     refreshBestLine();
   }
+
+  /* ---------------- 排行榜界面 ---------------- */
+  const lbModal = $('#lb');
+  const lbView  = { shape:'square', n:5, rev:false };
+
+  function lbSync(){
+    document.querySelectorAll('#lbShapeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === lbView.shape));
+    document.querySelectorAll('#lbSizeSeg button').forEach(b => b.classList.toggle('on', parseInt(b.dataset.v,10) === lbView.n));
+    $('#lbRev').classList.toggle('on', lbView.rev);
+    $('#lbSubtitle').textContent = `${shapeNameOf(lbView.shape)} ${lbView.n}×${lbView.n} · ${lbView.rev?'倒序':'正序'}`;
+  }
+
+  function shortDate(iso){
+    const d = new Date(iso);
+    if(isNaN(d.getTime())) return '';
+    const p = x => String(x).padStart(2,'0');
+    return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  function renderLB(){
+    const arr = lbList(lbView.shape, lbView.n, lbView.rev);
+    const box = $('#lbList');
+    if(!arr.length){
+      box.innerHTML = `<div class="lb-empty">还没有成绩<br>先跑一局再来<br><span style="font-size:11px">（仅统计本机）</span></div>`;
+      return;
+    }
+    box.innerHTML = arr.map((r, i) => {
+      const g  = gradeOf(r.s);
+      const me = r.id === state.lastRunId;
+      return `<div class="lb-row${me?' me':''}">
+          <span class="rk rk${i+1}">${i+1}</span>
+          <span class="t">${fmt(r.t)}<small>秒</small></span>
+          <span class="s g-${g}">${r.s}</span>
+          <span class="d">${shortDate(r.d)}</span>
+        </div>`;
+    }).join('');
+  }
+
+  function openLB(){
+    lbView.shape = state.shape;
+    lbView.n     = state.n;
+    lbView.rev   = state.reverse;
+    lbSync();
+    renderLB();
+    lbModal.classList.add('show');
+  }
+  function closeLB(){ lbModal.classList.remove('show'); }
 
   /* ---------------- 配置 ---------------- */
   function bindSeg(sel, key, cast){
@@ -676,13 +888,41 @@
     if(state.sound) blip(660, 0.06);
   });
 
+  /* ---------- 排行榜事件 ---------- */
+  $('#openLB').addEventListener('click', openLB);
+  $('#lbClose').addEventListener('click', closeLB);
+  lbModal.addEventListener('click', function(e){ if(e.target === lbModal) closeLB(); });
+
+  $('#lbShapeSeg').addEventListener('click', function(e){
+    const b = e.target.closest('button');
+    if(!b) return;
+    lbView.shape = b.dataset.v; lbSync(); renderLB();
+  });
+  $('#lbSizeSeg').addEventListener('click', function(e){
+    const b = e.target.closest('button');
+    if(!b) return;
+    lbView.n = parseInt(b.dataset.v, 10); lbSync(); renderLB();
+  });
+  $('#lbRev').addEventListener('click', function(){
+    lbView.rev = !lbView.rev; lbSync(); renderLB();
+  });
+  $('#lbClear').addEventListener('click', function(){
+    const all = lbAll();
+    delete all[lbKeyOf(lbView.shape, lbView.n, lbView.rev)];
+    try{ localStorage.setItem(LB_KEY, JSON.stringify(all)); }catch(e){}
+    renderLB(); refreshBestLine();
+    blip(300, .08, 'square');
+  });
+
   window.addEventListener('keydown', function(e){
-    if(e.code === 'Space' || e.code === 'Enter'){
+    if(e.key === 'Escape'){ closeLB(); return; }
+    const lbOpen = lbModal.classList.contains('show');
+    if(!lbOpen && (e.code === 'Space' || e.code === 'Enter')){
       e.preventDefault();
       const b = overlay.querySelector('button');
       if(b) b.click();
     }
-    if(e.key === 'r' || e.key === 'R') newRound();
+    if(!lbOpen && (e.key === 'r' || e.key === 'R')) newRound();
   });
 
   /* ---------------- 启动 ---------------- */
