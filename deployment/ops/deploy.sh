@@ -36,7 +36,7 @@ fi
 
 say "3/5 同步页面"
 cp "$REPO/deployment/index.html" "$SITE/public/"
-for d in schulte stroop nback memory shared; do
+for d in schulte stroop nback memory shared me; do
   [ -d "$REPO/deployment/$d" ] || continue
   rm -rf "$SITE/public/$d"
   cp -r "$REPO/deployment/$d" "$SITE/public/$d"
